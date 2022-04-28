@@ -1,5 +1,6 @@
 import * as React from "react";
 import {
+  Button,
   Container,
   VStack,
   Select,
@@ -16,13 +17,7 @@ import {
   TableCaption,
   TableContainer,
 } from "@chakra-ui/react";
-import {
-  AsyncCreatableSelect,
-  AsyncSelect,
-  CreatableSelect,
-  useChakraSelectProps,
-  Select as MultiSelect,
-} from "chakra-react-select";
+import { Select as MultiSelect } from "chakra-react-select";
 
 import { fetchTypes, fetchMakes, fetchCarData } from "./fetch";
 
@@ -31,11 +26,16 @@ function App() {
   const [selectedType, setSelectedType] = React.useState(null);
 
   const [makes, setMakes] = React.useState([]);
-  const [selectedMakes, setSelectedMakes] = React.useState(null);
+  const [selectedMakes, setSelectedMakes] = React.useState([]);
 
   const [carData, setCarData] = React.useState([]);
 
+  const [isYear, setIsYear] = React.useState(false);
   const [year, setYear] = React.useState(null);
+
+  const [lastSubmission, setLastSubmission] = React.useState(null);
+
+  const [buttonDisabled, setButtonDisabled] = React.useState(true);
 
   React.useEffect(() => {
     (async () => {
@@ -51,24 +51,56 @@ function App() {
     })();
   }, [selectedType]);
 
+  const searchCarData = async () => {
+    // validate()
+    const makeIds = selectedMakes.map((make) => make.value);
+    const carData = await fetchCarData({
+      type: selectedType,
+      year,
+      makeIds,
+    });
+    setLastSubmission({ selectedMakes, type: selectedType, year, isYear });
+    setCarData(carData);
+  };
+
   React.useEffect(() => {
-    (async () => {
-      const makeIds = selectedMakes.map((make) => make.value);
-      const carData = await fetchCarData({
-        type: selectedType,
-        year,
-        makeIds,
-      });
-      setCarData(carData);
-    })();
-  }, [selectedMakes]);
+    console.log(isYear);
+  }, [isYear]);
+
+  const validateYear = () => {
+    if (Number.isNaN(parseInt(year))) return false;
+    if (year.length !== 4) return false;
+    return true;
+  };
+
+  const currentSubmissionEqualsLastSubmission = () => {
+    if (!lastSubmission) return false;
+    if (lastSubmission.isYear !== isYear) return false;
+    if (isYear && lastSubmission.year !== year) return false;
+    if (lastSubmission.type !== selectedType) return false;
+    if (lastSubmission.selectedMakes.length !== selectedMakes.length)
+      return false;
+    for (let i = 0; i < selectedMakes.length; i++) {
+      if (lastSubmission.selectedMakes[i] !== selectedMakes[i]) return false;
+    }
+    return true;
+  };
+
+  React.useEffect(() => {
+    setButtonDisabled(
+      selectedType == null ||
+        !selectedMakes.length ||
+        (isYear && !validateYear()) ||
+        currentSubmissionEqualsLastSubmission()
+    );
+  }, [selectedMakes, selectedType, year, isYear]);
 
   return (
     <>
       <VStack align="start" spacing={5}>
-        <h1>Car Search</h1>
-        <Text mb="8px">Select Car Type:</Text>
         <Container maxW="container.sm" color="#262626">
+          <h1>Car Search</h1>
+          <Text mb="8px">Select Car Type:</Text>
           <Select
             placeholder="Select option"
             disabled={!types.length}
@@ -89,44 +121,67 @@ function App() {
               value: make.id,
             }))}
           />
-          <Text mb="8px">Label</Text>
-          <Checkbox>asdfds</Checkbox>
-          <Text mb="8px">Label</Text>
-          <Input />
+          <Checkbox
+            value={isYear}
+            onChange={(e) => setIsYear(e.target.checked)}
+          >
+            Use Year?
+          </Checkbox>
+          {isYear ? (
+            <Input
+              placeholder="2015"
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+            />
+          ) : (
+            <></>
+          )}
+          <br />
+          <Button
+            disabled={buttonDisabled}
+            onClick={() => searchCarData()}
+            colorScheme="teal"
+          >
+            Search
+          </Button>
         </Container>
       </VStack>
       <br />
-      <TableContainer>
-        <Table variant="simple">
-          <TableCaption>Imperial to metric conversion factors</TableCaption>
-          <Thead>
-            <Tr>
-              <Th>Make ID</Th>
-              <Th>Make Name</Th>
-              <Th>Model ID</Th>
-              <Th>Model Name</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {carData.map((car) => (
+      {carData.length ? (
+        <TableContainer>
+          <Table variant="simple">
+            <TableCaption>Car data</TableCaption>
+            <Thead>
               <Tr>
-                <Td>{car.makeId}</Td>
-                <Td>{car.makeName}</Td>
-                <Td>{car.modelId}</Td>
-                <Td>{car.modelName}</Td>
+                <Th>Make ID</Th>
+                <Th>Make Name</Th>
+                <Th>Model ID</Th>
+                <Th>Model Name</Th>
               </Tr>
-            ))}
-          </Tbody>
-          <Tfoot>
-            <Tr>
-              <Th>Make ID</Th>
-              <Th>Make Name</Th>
-              <Th>Model ID</Th>
-              <Th>Model Name</Th>
-            </Tr>
-          </Tfoot>
-        </Table>
-      </TableContainer>
+            </Thead>
+            <Tbody>
+              {carData.map((car) => (
+                <Tr>
+                  <Td>{car.makeId}</Td>
+                  <Td>{car.makeName}</Td>
+                  <Td>{car.modelId}</Td>
+                  <Td>{car.modelName}</Td>
+                </Tr>
+              ))}
+            </Tbody>
+            <Tfoot>
+              <Tr>
+                <Th>Make ID</Th>
+                <Th>Make Name</Th>
+                <Th>Model ID</Th>
+                <Th>Model Name</Th>
+              </Tr>
+            </Tfoot>
+          </Table>
+        </TableContainer>
+      ) : (
+        <></>
+      )}
     </>
   );
 }
