@@ -79,7 +79,7 @@ function App() {
 
   const validateYear = () => {
     if (Number.isNaN(parseInt(year))) return false;
-    if (year.length !== 4) return false;
+    if (year.length > 4) return false;
     return true;
   };
 
@@ -91,7 +91,8 @@ function App() {
     if (lastSubmission.selectedMakes.length !== selectedMakes.length)
       return false;
     for (let i = 0; i < selectedMakes.length; i++) {
-      if (lastSubmission.selectedMakes[i] !== selectedMakes[i]) return false;
+      if (lastSubmission.selectedMakes[i].value !== selectedMakes[i].value)
+        return false;
     }
     return true;
   };
@@ -104,7 +105,7 @@ function App() {
         (isYear && !validateYear()) ||
         currentSubmissionEqualsLastSubmission()
     );
-  }, [selectedMakes, selectedType, year, isYear]);
+  }, [selectedMakes, selectedType, year, isYear, isLoading]);
 
   React.useEffect(() => {
     if (!isYear) {
