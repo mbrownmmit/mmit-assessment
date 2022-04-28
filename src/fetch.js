@@ -24,7 +24,7 @@ export const fetchMakes = async (type) => {
 export const fetchCarData = async ({ type, makeIds, year }) => {
   type = type.trim();
   const data = [];
-  if (year == null) {
+  if (!year) {
     for (const makeId of makeIds) {
       const raw = await fetch(
         `https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeIdYear/makeId/${makeId}/vehicleType/${type}?format=json`

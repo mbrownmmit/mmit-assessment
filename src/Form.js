@@ -16,6 +16,8 @@ import {
   Td,
   TableCaption,
   TableContainer,
+  Spinner,
+  FormErrorMessage,
 } from "@chakra-ui/react";
 import { Select as MultiSelect } from "chakra-react-select";
 
@@ -31,28 +33,35 @@ function App() {
   const [carData, setCarData] = React.useState([]);
 
   const [isYear, setIsYear] = React.useState(false);
-  const [year, setYear] = React.useState(null);
+  const [year, setYear] = React.useState("");
+  const [isYearError, setIsYearError] = React.useState(false);
 
   const [lastSubmission, setLastSubmission] = React.useState(null);
 
   const [buttonDisabled, setButtonDisabled] = React.useState(true);
 
+  const [isLoading, setIsLoading] = React.useState(false);
+
   React.useEffect(() => {
     (async () => {
+      setIsLoading(true);
       const newTypes = await fetchTypes();
       setTypes(newTypes);
+      setIsLoading(false);
     })();
   }, []);
 
   React.useEffect(() => {
     (async () => {
+      setIsLoading(true);
       const newMakes = await fetchMakes(selectedType);
       setMakes(newMakes);
+      setIsLoading(false);
     })();
   }, [selectedType]);
 
   const searchCarData = async () => {
-    // validate()
+    setIsLoading(true);
     const makeIds = selectedMakes.map((make) => make.value);
     const carData = await fetchCarData({
       type: selectedType,
@@ -61,6 +70,7 @@ function App() {
     });
     setLastSubmission({ selectedMakes, type: selectedType, year, isYear });
     setCarData(carData);
+    setIsLoading(false);
   };
 
   React.useEffect(() => {
@@ -88,18 +98,40 @@ function App() {
 
   React.useEffect(() => {
     setButtonDisabled(
-      selectedType == null ||
+      isLoading ||
+        selectedType == null ||
         !selectedMakes.length ||
         (isYear && !validateYear()) ||
         currentSubmissionEqualsLastSubmission()
     );
   }, [selectedMakes, selectedType, year, isYear]);
 
+  React.useEffect(() => {
+    if (!isYear) {
+      setIsYearError(false);
+      return;
+    }
+    if (year === "") {
+      setIsYearError(false);
+      return;
+    }
+    if (validateYear()) {
+      setIsYearError(false);
+      return;
+    }
+    setIsYearError(true);
+  }, [isYear, year]);
+
   return (
     <>
       <VStack align="start" spacing={5}>
         <Container maxW="container.sm" color="#262626">
+          <br />
+          <br />
+          <br />
+          <br />
           <h1>Car Search</h1>
+          <br />
           <Text mb="8px">Select Car Type:</Text>
           <Select
             placeholder="Select option"
@@ -110,6 +142,8 @@ function App() {
               <option value={type}>{type}</option>
             ))}
           </Select>
+          <br />
+
           <Text mb="8px">Select Car Make(s)</Text>
           <MultiSelect
             onChange={(newSelectedMakes) => setSelectedMakes(newSelectedMakes)}
@@ -121,6 +155,8 @@ function App() {
               value: make.id,
             }))}
           />
+          <br />
+
           <Checkbox
             value={isYear}
             onChange={(e) => setIsYear(e.target.checked)}
@@ -128,15 +164,26 @@ function App() {
             Use Year?
           </Checkbox>
           {isYear ? (
-            <Input
-              placeholder="2015"
-              value={year}
-              onChange={(e) => setYear(e.target.value)}
-            />
+            <>
+              <Input
+                isInvalid={isYearError}
+                placeholder="2015"
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+              />
+
+              {isYearError ? (
+                <Text color="red">Please fill in a valid year.</Text>
+              ) : (
+                <></>
+              )}
+            </>
           ) : (
             <></>
           )}
           <br />
+          <br />
+
           <Button
             disabled={buttonDisabled}
             onClick={() => searchCarData()}
@@ -144,6 +191,7 @@ function App() {
           >
             Search
           </Button>
+          {isLoading ? <Spinner /> : <></>}
         </Container>
       </VStack>
       <br />
